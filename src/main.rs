@@ -5,6 +5,7 @@ use std::io::{prelude::*, Bytes};
 use std::prelude::v1::*;
 use std::io;
 use std::io::stdin;
+use std::fs::OpenOptions;
 extern crate chrono;
 #[macro_use]
 extern crate std as std;
@@ -16,22 +17,29 @@ fn say_hello() -> &'static str {
     "Hello dear world!"
 }
 //fn log_something(filename: &'static str, string: &'static [u8; 12]) -> io::Result<()> {
-fn log_something() -> io::Result<()>{
-    let mut file_name = String::new();
-    stdin()
-        .read_line(&mut file_name)
-        .expect("Failed to real line!");
-    let file_name = file_name.trim();
-    // 添加.txt扩展名
-    let file_name = format!("{}.txt", file_name);
-    let mut f = File::create(&file_name)?;
-    let local: DateTime<Local> = Local::now();
-    println!("{}", local);
-    let bytes = local.format("%a, %b %d %Y %I:%M:%S %p\n").to_string();
-    let bytes = bytes.as_bytes();
-    f.write_all(bytes)?;
-    Ok(())
-}
+    fn formatted_time_entry() -> String {
+        let local: DateTime<Local> = Local::now();
+        let formatted = local.format("%a, %b %d %Y %I:%M:%S %p\n").to_string();
+        formatted
+    }
+    
+    fn record_entry_in_log(filename: &str, bytes: &[u8]) -> io::Result<()> {
+        let mut file = OpenOptions::new().
+                            append(true).
+                            write(true).
+                            create(true).
+                            open(filename)?;
+        file.write_all(bytes)?;
+        Ok(())
+    }
+    
+    fn log_time(filename: &'static str) -> io::Result<()> {
+        let entry = formatted_time_entry();
+        let bytes = entry.as_bytes();
+    
+        record_entry_in_log(filename, &bytes)?;
+        Ok(())
+    }
 fn main() {
     let mut server = Nickel::new();
     // server.utilize(router! {
@@ -41,9 +49,9 @@ fn main() {
     // });
 
     // server.listen("127.0.0.1:6767");
-    match log_something() {
+    match log_time("log.txt") {
         Ok(..) => println!("File created!"),
-        Err(..) => println!("Error: could not create file.")
+        Err(e) => println!("Error: {}", e)
     }
 }
 
