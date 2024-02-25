@@ -3,6 +3,7 @@ use nickel::Nickel;
 use std::fs::File;
 use std::io::prelude::*;
 use std::prelude::v1::*;
+use std::io;
 #[macro_use]
 extern crate std as std;
 // use std::collections::HashMap;
@@ -11,13 +12,14 @@ extern crate std as std;
 fn say_hello() -> &'static str {
     "Hello dear world!"
 }
-fn log_something(filename: &'static str, string: &'static  [u8; 12]){
-    let mut f = File::create(filename).unwrap();
-    f.write_all(string);
+fn log_something(filename: &'static str, string: &'static [u8; 12]) -> io::Result<()> {
+    let mut f = File::create(filename)?;
+    f.write_all(string)?;
+    Ok(())
 }
 fn main() {
     let mut server = Nickel::new();
-    log_something("log.txt", b"ITS ALIVE!!!");
+    log_something("log.txt", b"ITS DEADS!!!");
     server.utilize(router! {
         get "**" => |_req, _res| {
             say_hello()
