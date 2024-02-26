@@ -1,22 +1,16 @@
+use std::io::prelude::*;
+use std::fs::OpenOptions;
+use std::io;
+
 #[macro_use] extern crate nickel;
 use nickel::Nickel;
-use std::fs::File;
-use std::io::{prelude::*, Bytes};
-use std::prelude::v1::*;
-use std::io;
-use std::io::stdin;
-use std::fs::OpenOptions;
-extern crate chrono;
-#[macro_use]
-extern crate std as std;
-use chrono::*;
-// use std::collections::HashMap;
-// use nickel::{Nickel, HttpRouter};
 
-fn say_hello() -> &'static str {
-    "Hello dear world!"
-}
-//fn log_something(filename: &'static str, string: &'static [u8; 12]) -> io::Result<()> {
+extern crate chrono;
+use chrono::{DateTime,Local};
+
+extern crate clap;
+use clap::{App,Arg};
+
 fn formatted_time_entry() -> String {
     let local: DateTime<Local> = Local::now();
     let formatted = local.format("%a, %b %d %Y %I:%M:%S %p\n").to_string();
@@ -33,7 +27,7 @@ fn record_entry_in_log(filename: &str, bytes: &[u8]) -> io::Result<()> {
     Ok(())
 }
 
-fn log_time(filename: &'static str) -> io::Result<String> {
+fn log_time(filename: &String) -> io::Result<String> {
     let entry = formatted_time_entry();
     {
         let bytes = entry.as_bytes();
@@ -43,34 +37,40 @@ fn log_time(filename: &'static str) -> io::Result<String> {
     Ok(entry)
 }
 
-fn do_log_time() -> String {
-    match log_time("log.txt") {
-        Ok(entry) => format!("Entry Logged: {}", entry),
-        Err(e) => format!("Error: {}", e)
-    }
+fn do_log_time(logfile_path: String, auth_token: Option<String>) -> String {
+  match log_time(&logfile_path) {
+      Ok(entry) => format!("Entry Logged: {}", entry),
+      Err(e) => format!("Error: {}", e)
+  }
 }
 
 fn main() {
-    let mut server = Nickel::new();
+  let matches = App::new("simple-log").version("v0.0.1")
+  .arg(Arg::with_name("LOG FILE")
+       .short("l")
+       .long("logfile")
+       .required(true)
+       .takes_value(true))
+  .arg(Arg::with_name("AUTH TOKEN")
+       .short("t")
+       .long("token")
+       .takes_value(true))
+  .get_matches();
 
-    server.utilize(router! {
-        get "**" => |_req, _res| {
-            do_log_time()
-        }
-    });
+  let logfile_path = matches.value_of("LOG FILE").unwrap().to_string();
+  let auth_token = match matches.value_of("AUTH TOKEN") {
+      Some(str) => Some(str.to_string()),
+      None => None
+  };
 
-    server.listen("127.0.0.1:6767");
+  let mut server = Nickel::new();
+  server.utilize(router! {
+      get "**" => |_req, _res| {
+          do_log_time(logfile_path.clone(), auth_token.clone())
+      }
+  });
+
+
+
+  server.listen("127.0.0.1:6767");
 }
-
-
-// fn main() {
-//     let mut server = Nickel::new();
-
-//     server.get("/", middleware! { |_, response|
-//         let mut data = HashMap::new();
-//         data.insert("name", "user");
-//         return response.render("site/assets/template.tpl", &data);
-//     });
-
-//     server.listen("127.0.0.1:6767");
-// } 
